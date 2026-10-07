@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prueba PUMI → ArcGIS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, #0f2740, #174f78);
+      color: #17202a;
+    }
+    .card {
+      width: min(720px, 92vw);
+      background: white;
+      border-radius: 22px;
+      padding: 34px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.25);
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: #607080; margin-bottom: 24px; line-height: 1.5; }
+    .route {
+      background: #f4f7fa;
+      border: 1px solid #dce4eb;
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      font-weight: 700;
+      margin-bottom: 22px;
+    }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 13px;
+      padding: 15px 18px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #1769aa;
+      color: white;
+    }
+    button:disabled { opacity: .65; cursor: wait; }
+    #resultado {
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 14px;
+      background: #eef2f5;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+    .ok { background: #e7f7ed !important; border: 1px solid #91d5a7; }
+    .error { background: #fdecec !important; border: 1px solid #efaaaa; }
+    .loading { background: #fff6dc !important; border: 1px solid #efd17b; }
+    .big { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+    code { word-break: break-all; font-size: 12px; color: #45515c; }
+    .note { margin-top: 18px; font-size: 13px; color: #687784; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Prueba de conexión directa PUMI → ArcGIS</h1>
+    <div class="sub">
+      Esta página no utiliza Render. El navegador consulta directamente
+      una capa de ArcGIS Online utilizada por PUMI.
+    </div>
+
+    <div class="route">NAVEGADOR / GITHUB PAGES → ARCGIS ONLINE</div>
+
+    <button id="btn" onclick="probarConexion()">Probar conexión a ArcGIS</button>
+
+    <div id="resultado">
+      Presione el botón para iniciar la prueba.
+    </div>
+
+    <div class="note">
+      La prueba es únicamente de lectura. No crea, modifica ni elimina registros.
+    </div>
+  </main>
+
+<script>
+const LAYER =
+  "https://services5.arcgis.com/O0HjrwhVoKXT72lM/arcgis/rest/services/PUMI_ACTIVIDADES/FeatureServer/0";
+
+async function probarConexion() {
+  const btn = document.getElementById("btn");
+  const box = document.getElementById("resultado");
+
+  btn.disabled = true;
+  box.className = "loading";
+  box.innerHTML = '<div class="big">Conectando...</div>Consultando ArcGIS directamente, sin Render.';
+
+  const url = LAYER + "/query?where=1%3D1&returnCountOnly=true&f=json";
+
+  try {
+    const inicio = performance.now();
+    const respuesta = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+      cache: "no-store"
+    });
+    const datos = await respuesta.json();
+    const ms = Math.round(performance.now() - inicio);
+
+    if (!respuesta.ok || datos.error) {
+      const detalle = datos?.error?.message || ("HTTP " + respuesta.status);
+      throw new Error(detalle);
+    }
+
+    box.className = "ok";
+    box.innerHTML =
+      '<div class="big">✓ CONEXIÓN DIRECTA EXITOSA</div>' +
+      'ArcGIS respondió directamente al navegador.<br>' +
+      '<strong>Registros detectados:</strong> ' + datos.count + '<br>' +
+      '<strong>Tiempo:</strong> ' + ms + ' ms<br><br>' +
+      '<code>' + url + '</code>';
+
+  } catch (err) {
+    box.className = "error";
+    box.innerHTML =
+      '<div class="big">✕ La conexión directa no fue aceptada</div>' +
+      'ArcGIS devolvió este resultado:<br><strong>' +
+      String(err.message || err) +
+      '</strong><br><br>' +
+      '<code>' + url + '</code>';
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
